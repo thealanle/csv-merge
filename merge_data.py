@@ -62,11 +62,14 @@ class Database:
         self.headers.extend(
             [x for x in delta_db.headers if x not in self.headers])
         key = self.headerpicker(common_headers)
+        records_temp = self.records[:]
         for each in delta_db.records:
-            record = self.fetch_record(key, each)
-            record.attributes.update(each.attributes)
+            record = self.fetch_record(key, each, records_temp)
+            if record:
+                record.attributes.update(each.attributes)
+        self.records = records_temp
 
-    def export(self, out_filename='result.csv'):
+    def export(self, out_filename='RESULT.csv'):
         query = input("Enter output filename: ")
         if query == '':
             query = out_filename
@@ -76,11 +79,11 @@ class Database:
             for record in self.records:
                 writer.writerow(record.attributes)
 
-    def fetch_record(self, key, record2):
+    def fetch_record(self, key, record2, records_temp):
         for record in self.records:
             if record.attributes[key] == record2.attributes[key]:
                 return record
-        return record2
+        records_temp.append(record2)
 
     def print_data(self):
         for record in self.records:
@@ -103,15 +106,25 @@ def filepicker():
     for index, filename in enumerate(files, 1):
         d[index] = filename
         print("[{}] {}".format(index, filename))
-    choice = int(input("Enter the number of the file to open: ").strip())
-    print("-" * 20)
+    choice = int(input("\n>").strip())
+    print("-" * 20, "\n")
 
     return d[choice]
 
 
 if __name__ == "__main__":
     # db = input("Enter the name of the file to update: ").strip()
+    print("Pick a file to open:")
     db = filepicker()
     database = Database(db)
-    database.merge(filepicker())
+    query = ''
+    while query.upper() != 'N':
+        query = 'N'
+        print("Pick a file to merge:")
+        try:
+            database.merge(filepicker())
+            print("Merge successful!")
+        except TypeError:
+            print("Merge unsuccessful.")
+        query = input("Merge another database? y/N\n>")
     database.export()
