@@ -2,7 +2,6 @@
 
 import csv
 import os
-UPDATE_DIR = 'update-files/'
 
 
 class Record:
@@ -58,17 +57,32 @@ class Database:
         pass
 
     def merge(self, db2):
+        """
+        Create a new database from a csv file, then compare its records with
+        the master database. Update the records in the master database with data
+        from the delta database.
+        """
         delta_db = Database(db2)
         common_headers = [x for x in self.headers if x in delta_db.headers]
         self.headers.extend(
             [x for x in delta_db.headers if x not in self.headers])
-        key = self.headerpicker(common_headers)
-        records_temp = list(self.records)
-        for each in delta_db.records:
-            record = self.fetch_record(key, each, records_temp)
-            if record:
-                record.attributes.update(each.attributes)
-        self.records = records_temp
+
+        if len(common_headers) < 1:
+            print("No shared headers were found. These files cannot be merged.")
+        else:
+            key = ''
+            if len(common_headers) == 1:
+                key = common_headers[0]
+                print(key)
+            else:
+                key = self.headerpicker(common_headers)
+            records_temp = list(self.records)
+            for each in delta_db.records:
+                record = self.fetch_record(key, each, records_temp)
+                if record:
+                    record.attributes.update(each.attributes)
+            self.records = records_temp
+            print("Merge successful!\n")
 
     def export(self, out_filename='RESULT.csv'):
         query = input("Enter output filename: ")
@@ -139,15 +153,10 @@ if __name__ == "__main__":
     # update_folder = folderpicker()
     database = Database(db)
     query = ''
-    while query.upper() != 'N':
+    while query.lower() != 'n':
         print("Pick a file to merge:")
-        try:
-            # database.merge(filepicker(update_folder))
-            database.merge(filepicker())
-            print("Merge successful!")
-        except TypeError:
-            print("Merge unsuccessful.")
-        query = input("Merge another database? [y/N]\n>")
+        database.merge(filepicker())
+        query = input("Merge another database? [y/N]\n>").strip()
         if query == '':
             query = 'N'
     database.export()
