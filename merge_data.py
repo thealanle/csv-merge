@@ -18,6 +18,9 @@ class Record:
             print("{}: {}".format(key, value))
         return ''
 
+    def set_key(self, key):
+        self.key = key
+
 
 class Database:
 
@@ -55,7 +58,13 @@ class Database:
 
     def merge(self, db2):
         delta_db = Database(db2)
-        pass
+        common_headers = [x for x in self.headers if x in delta_db.headers]
+        self.headers.extend(
+            [x for x in delta_db.headers if x not in self.headers])
+        key = self.headerpicker(common_headers)
+        for each in delta_db.records:
+            record = self.fetch_record(key, each)
+            record.attributes.update(each.attributes)
 
     def export(self, out_filename='result.csv'):
         query = input("Enter output filename: ")
@@ -67,19 +76,35 @@ class Database:
             for record in self.records:
                 writer.writerow(record.attributes)
 
+    def fetch_record(self, key, record2):
+        for record in self.records:
+            if record.attributes[key] == record2.attributes[key]:
+                return record
+        return record2
+
     def print_data(self):
         for record in self.records:
             print(record)
+
+    def headerpicker(self, common_headers):
+        d = {}
+        for index, header in enumerate(common_headers, 1):
+            d[index] = header
+            print("[{}] {}".format(index, header))
+        choice = int(
+            input("Enter the number of the header to use as key: ").strip())
+        return d[choice]
 
 
 def filepicker():
     d = {}
     files = os.listdir(os.curdir)
-    files = [f for f in files if os.path.isfile(f)]
+    files = [f for f in files if os.path.isfile(f) and '.csv' in f[-4:]]
     for index, filename in enumerate(files, 1):
         d[index] = filename
-        print("({}): {}".format(index, filename))
-    choice = int(input("Enter the number of the file to open: "))
+        print("[{}] {}".format(index, filename))
+    choice = int(input("Enter the number of the file to open: ").strip())
+    print("-" * 20)
 
     return d[choice]
 
@@ -87,10 +112,6 @@ def filepicker():
 if __name__ == "__main__":
     # db = input("Enter the name of the file to update: ").strip()
     db = filepicker()
-    if db[-4:] != '.csv':
-        print("Error: File must end in \".csv\"")
-    else:
-        print('Opening "{}"...'.format(db))
-        database = Database(db)
-        database.print_data()
-        database.export()
+    database = Database(db)
+    database.merge(filepicker())
+    database.export()
