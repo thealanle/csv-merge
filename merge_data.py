@@ -3,7 +3,6 @@
 import csv
 import os
 UPDATE_DIR = 'update-files/'
-OUTPUT_FILE = 'result.csv'
 
 
 class Record:
@@ -99,13 +98,28 @@ class Database:
         return d[choice]
 
 
-def filepicker():
+def filepicker(dir=os.curdir):
     d = {}
-    files = os.listdir(os.curdir)
+    files = os.listdir(dir)
     files = [f for f in files if os.path.isfile(f) and '.csv' in f[-4:]]
     for index, filename in enumerate(files, 1):
         d[index] = filename
         print("[{}] {}".format(index, filename))
+    choice = int(input("\n>").strip())
+    print("-" * 20, "\n")
+    if dir == os.curdir:
+        return d[choice]
+    else:
+        return dir + d[choice]
+
+
+def folderpicker():
+    d = {}
+    dirs = os.listdir(os.curdir)
+    dirs = [x for x in dirs if os.path.isdir(x)]
+    for index, dirname in enumerate(dirs, 1):
+        d[index] = dirname
+        print("[{}] {}".format(index, dirname))
     choice = int(input("\n>").strip())
     print("-" * 20, "\n")
 
@@ -116,13 +130,15 @@ if __name__ == "__main__":
     # db = input("Enter the name of the file to update: ").strip()
     print("Pick a file to open:")
     db = filepicker()
+    print("Pick an update folder:")
+    update_folder = folderpicker()
     database = Database(db)
     query = ''
     while query.upper() != 'N':
         query = 'N'
         print("Pick a file to merge:")
         try:
-            database.merge(filepicker())
+            database.merge(filepicker(update_folder + '/'))
             print("Merge successful!")
         except TypeError:
             print("Merge unsuccessful.")
