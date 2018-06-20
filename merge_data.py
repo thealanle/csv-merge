@@ -10,7 +10,7 @@ class Record:
     def __init__(self, data):
         self.attributes = dict()
         for attribute, value in data:
-            self.attributes[attribute] = value
+            self.attributes[attribute.strip()] = value.strip()
 
     def __str__(self):
         for key, value in self.attributes.items():
@@ -38,6 +38,8 @@ class Database:
             entry = Record(zip(self.headers, row))
             self.records.append(entry)
 
+        print("A database has been created from {}.\n".format(self.filename))
+
     def __str__(self):
         for record in self.records:
             print(record)
@@ -61,7 +63,7 @@ class Database:
         self.headers.extend(
             [x for x in delta_db.headers if x not in self.headers])
         key = self.headerpicker(common_headers)
-        records_temp = self.records[:]
+        records_temp = list(self.records)
         for each in delta_db.records:
             record = self.fetch_record(key, each, records_temp)
             if record:
@@ -72,7 +74,7 @@ class Database:
         query = input("Enter output filename: ")
         if query == '':
             query = out_filename
-        with open(query, encoding='utf-8', mode='w') as out_file:
+        with open(query, encoding='utf-8', mode='w', newline='\n') as out_file:
             writer = csv.DictWriter(out_file, fieldnames=self.headers)
             writer.writeheader()
             for record in self.records:
@@ -90,18 +92,21 @@ class Database:
 
     def headerpicker(self, common_headers):
         d = {}
+        print("Enter the number of the header to use as key (Default = [1]).")
         for index, header in enumerate(common_headers, 1):
             d[index] = header
             print("[{}] {}".format(index, header))
-        choice = int(
-            input("Enter the number of the header to use as key: ").strip())
-        return d[choice]
+        choice = input("\n>").strip()
+        if choice == '':
+            return d[1]
+        return d[int(choice)]
 
 
 def filepicker(dir=os.curdir):
     d = {}
     files = os.listdir(dir)
-    files = [f for f in files if os.path.isfile(f) and '.csv' in f[-4:]]
+    files = sorted(
+        [f for f in files if os.path.isfile(f) and '.csv' in f[-4:]])
     for index, filename in enumerate(files, 1):
         d[index] = filename
         print("[{}] {}".format(index, filename))
@@ -113,34 +118,36 @@ def filepicker(dir=os.curdir):
         return dir + d[choice]
 
 
-def folderpicker():
-    d = {}
-    dirs = os.listdir(os.curdir)
-    dirs = [x for x in dirs if os.path.isdir(x)]
-    for index, dirname in enumerate(dirs, 1):
-        d[index] = dirname
-        print("[{}] {}".format(index, dirname))
-    choice = int(input("\n>").strip())
-    print("-" * 20, "\n")
-
-    return d[choice]
+# def folderpicker():
+#     d = {}
+#     dirs = os.listdir(os.curdir)
+#     dirs = [x for x in dirs if os.path.isdir(x)]
+#     for index, dirname in enumerate(dirs, 1):
+#         d[index] = dirname
+#         print("[{}] {}".format(index, dirname))
+#     choice = int(input("\n>").strip())
+#     print("-" * 20, "\n")
+#
+#     return d[choice] + '/'
 
 
 if __name__ == "__main__":
     # db = input("Enter the name of the file to update: ").strip()
     print("Pick a file to open:")
     db = filepicker()
-    print("Pick an update folder:")
-    update_folder = folderpicker()
+    # print("Pick an update folder:")
+    # update_folder = folderpicker()
     database = Database(db)
     query = ''
     while query.upper() != 'N':
-        query = 'N'
         print("Pick a file to merge:")
         try:
-            database.merge(filepicker(update_folder + '/'))
+            # database.merge(filepicker(update_folder))
+            database.merge(filepicker())
             print("Merge successful!")
         except TypeError:
             print("Merge unsuccessful.")
-        query = input("Merge another database? y/N\n>")
+        query = input("Merge another database? [y/N]\n>")
+        if query == '':
+            query = 'N'
     database.export()
