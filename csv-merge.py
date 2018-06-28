@@ -7,6 +7,9 @@ import os
 class Record:
 
     def __init__(self, data):
+        """
+        Store incoming {header:data} pairs in a dict
+        """
         self.attributes = dict()
         for attribute, value in data:
             self.attributes[attribute.strip()] = value.strip()
@@ -25,23 +28,21 @@ class Database:
     def __init__(self, in_file):
         self.filename = in_file
         self.records = list()
-        self.headers = list()
-        self.raw_data = list()
+        # self.in_data = list()
 
         with open(self.filename, mode='r', encoding='utf-8') as master_db:
             reader = csv.reader(master_db)
-            self.raw_data = self.listed_data(reader)
+            self.in_data = self.listed_data(reader)
 
-        self.headers = self.raw_data[0]
-        for row in self.raw_data[1:]:
+        self.headers = self.in_data[0]
+        for row in self.in_data[1:]:
             entry = Record(zip(self.headers, row))
             self.records.append(entry)
 
         print("A database has been created from {}.\n".format(self.filename))
 
     def __str__(self):
-        for record in self.records:
-            print(record)
+        self.print_data()
         return ''
 
     def listed_data(self, reader):
@@ -63,7 +64,11 @@ class Database:
         from the delta database.
         """
         delta_db = Database(db2)
+
+        # Find common headers between the master and delta databases
         common_headers = [x for x in self.headers if x in delta_db.headers]
+
+        # Any new headers found in the delta are added to the master
         self.headers.extend(
             [x for x in delta_db.headers if x not in self.headers])
 
@@ -71,28 +76,43 @@ class Database:
             print("No shared headers were found. These files cannot be merged.")
         else:
             key = ''
+            # Skip picker prompt if there is only one common header
             if len(common_headers) == 1:
                 key = common_headers[0]
-                print(key)
             else:
                 key = self.headerpicker(common_headers)
+
+            # Create a temp list for new records to be added to
             records_temp = list(self.records)
+
+            # Iterate over new records and attempt to match to existing record
             for each in delta_db.records:
                 record = self.fetch_record(key, each, records_temp)
                 if record:
                     record.attributes.update(each.attributes)
+
             self.records = records_temp
             print("Merge successful!\n")
 
     def export(self, out_filename='RESULT.csv'):
-        query = input("Enter output filename: ")
+        """
+        Exports the database's records to a CSV.
+        """
+
+        query = input(
+            "Enter output filename (Default = {}):\n>".format(out_filename))
+        # Set filename to the default value if user doesn't enter one
         if query == '':
             query = out_filename
+
         with open(query, encoding='utf-8', mode='w', newline='\n') as out_file:
             writer = csv.DictWriter(out_file, fieldnames=self.headers)
-            writer.writeheader()
+
+            writer.writeheader()  # Write the headers to the first row
             for record in self.records:
                 writer.writerow(record.attributes)
+
+        print("Successfully output to {}".format(query))
 
     def fetch_record(self, key, record2, records_temp):
         for record in self.records:
@@ -117,19 +137,25 @@ class Database:
 
 
 def filepicker(dir=os.curdir):
-    d = {}
+    """
+    Display a list of files in a directory and allow selection by the user.
+    """
+    choices = {}
     files = os.listdir(dir)
     files = sorted(
         [f for f in files if os.path.isfile(f) and '.csv' in f[-4:]])
+
+    # Print the filenames with corresponding integers
     for index, filename in enumerate(files, 1):
-        d[index] = filename
+        choices[index] = filename
         print("[{}] {}".format(index, filename))
-    choice = int(input("\n>").strip())
+
+    choice = int(input("\n>").strip())  # Prompt user for choice
     print("-" * 20, "\n")
     if dir == os.curdir:
-        return d[choice]
+        return choices[choice]
     else:
-        return dir + d[choice]
+        return dir + choices[choice]
 
 
 # def folderpicker():
