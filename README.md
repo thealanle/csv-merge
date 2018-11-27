@@ -1,5 +1,5 @@
 # csv-merge
-A tool for merging data in .csv files.
+A tool for parsing and repackaging text-formatted EMR data.
 
 <!-- ### Usage
 csv-merge.py allows csv  -->
